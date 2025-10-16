@@ -18,9 +18,20 @@ app.use(session({
 }));
 
 // -----------------------------
-// Persistent uploads folder
+// Determine uploads folder
 // -----------------------------
-const UPLOAD_DIR = path.join("/mnt/data", "uploads"); // Render persistent disk
+let UPLOAD_DIR;
+if (fs.existsSync("/mnt/data")) {
+  // Persistent disk attached
+  UPLOAD_DIR = path.join("/mnt/data", "uploads");
+  console.log("Using persistent disk at", UPLOAD_DIR);
+} else {
+  // First deploy / no persistent disk
+  UPLOAD_DIR = path.join(process.cwd(), "data", "uploads");
+  console.log("Persistent disk not found, using local folder", UPLOAD_DIR);
+}
+
+// Create folder if it doesn't exist
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Serve static files
