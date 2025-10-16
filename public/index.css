@@ -61,6 +61,7 @@ header .right-items p {
   margin: 0 auto;
   justify-content: center;
   gap: 0.5em;
+  padding: 0.5em;
 }
 
 .image-div {
@@ -164,4 +165,29 @@ header .right-items p {
 .image-div:nth-child(10n+10) {
   height: 30em;
   width: 40em;
+}
+
+footer {
+  background-color: #111;
+  color: #fff;
+  padding: 20px 0;
+  text-align: center;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.social-icons a {
+  color: #fff;
+  margin: 0 10px;
+  font-size: 1.5rem;
+  transition: color 0.3s;
+}
+
+.social-icons a:hover {
+  color: #f39c12;
 }
