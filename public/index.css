@@ -214,7 +214,7 @@ footer {
   .image-div:nth-child(10n+1),
   .image-div:nth-child(10n+2),
   .image-div:nth-child(10n+3) {
-    height: 50vh;
+    height: 70vh;
   }
 
   .image-div:nth-child(10n+4),
@@ -224,7 +224,7 @@ footer {
   .image-div:nth-child(10n+8),
   .image-div:nth-child(10n+9),
   .image-div:nth-child(10n+10) {
-    height: 44vh;
+    height: 64vh;
   }
 }
 
@@ -233,7 +233,7 @@ footer {
   .image-div:nth-child(10n+1),
   .image-div:nth-child(10n+2),
   .image-div:nth-child(10n+3) {
-    height: 60vh;
+    height: 80vh;
   }
 
   .image-div:nth-child(10n+4),
@@ -243,6 +243,6 @@ footer {
   .image-div:nth-child(10n+8),
   .image-div:nth-child(10n+9),
   .image-div:nth-child(10n+10) {
-    height: 54vh;
+    height: 74vh;
   }
 }
