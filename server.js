@@ -17,35 +17,35 @@ app.use(session({
   saveUninitialized: true,
 }));
 
-// --- Persistent disk path for Render ---
-const UPLOAD_DIR = "/mnt/data/uploads"; // Render persistent disk
+// -----------------------------
+// Persistent uploads folder
+// -----------------------------
+const UPLOAD_DIR = path.join("/mnt/data", "uploads"); // Render persistent disk
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// Serve public folder and uploads
+// Serve static files
 app.use(express.static("public"));
 app.use("/uploads", express.static(UPLOAD_DIR));
 
-// Ensure JSON DB exists
+// -----------------------------
+// JSON DB for images
+// -----------------------------
+const IMAGE_DB = path.join("data", "images.json");
 if (!fs.existsSync("data")) fs.mkdirSync("data");
-if (!fs.existsSync("data/images.json")) fs.writeFileSync("data/images.json", "[]");
+if (!fs.existsSync(IMAGE_DB)) fs.writeFileSync(IMAGE_DB, "[]");
 
-// Multer storage for uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
-});
-const upload = multer({ storage });
-
-// Helpers
 function loadImages() {
-  try { return JSON.parse(fs.readFileSync("data/images.json", "utf8")); }
+  try { return JSON.parse(fs.readFileSync(IMAGE_DB, "utf8")); }
   catch { return []; }
 }
+
 function saveImages(images) {
-  fs.writeFileSync("data/images.json", JSON.stringify(images, null, 2));
+  fs.writeFileSync(IMAGE_DB, JSON.stringify(images, null, 2));
 }
 
-// --- Admin Auth ---
+// -----------------------------
+// Admin Auth
+// -----------------------------
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
   if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
@@ -63,7 +63,18 @@ app.get("/is-admin", (req, res) => {
   res.json({ isAdmin: req.session.isAdmin === true });
 });
 
-// --- Upload route ---
+// -----------------------------
+// Multer upload setup
+// -----------------------------
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
+});
+const upload = multer({ storage });
+
+// -----------------------------
+// Upload route
+// -----------------------------
 app.post("/upload", upload.single("image"), (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -75,10 +86,14 @@ app.post("/upload", upload.single("image"), (req, res) => {
   res.json({ success: true, url: imageUrl });
 });
 
-// --- Get all images ---
+// -----------------------------
+// Get all images
+// -----------------------------
 app.get("/images", (req, res) => res.json(loadImages()));
 
-// --- Delete image ---
+// -----------------------------
+// Delete image
+// -----------------------------
 app.delete("/images/:filename", (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -93,7 +108,9 @@ app.delete("/images/:filename", (req, res) => {
   res.json({ success: true });
 });
 
-// --- Serve HTML ---
+// -----------------------------
+// Serve HTML
+// -----------------------------
 app.get("/", (req, res) => res.sendFile(path.resolve("public/index.html")));
 
 const PORT = process.env.PORT || 3000;
