@@ -129,42 +129,42 @@ header .right-items p {
 .image-div:nth-child(10n+1),
 .image-div:nth-child(10n+2),
 .image-div:nth-child(10n+3) {
-  height: 40em;
-  width: 25em;
+  height: 40vh;
+  width: 25vw;
 }
 
 /* Next two landscapes (-- ) */
 .image-div:nth-child(10n+4) {
-  height: 30em;
-  width: 40em;
+  height: 30vh;
+  width: 40vw;
 }
 
 .image-div:nth-child(10n+5) {
-  height: 30em;
-  width: 35em;
+  height: 30vh;
+  width: 35vw;
 }
 
 /* |-| style mix */
 .image-div:nth-child(10n+6),
 .image-div:nth-child(10n+8) {
-  height: 30em;
-  width: 20em;
+  height: 30vh;
+  width: 20vw;
 }
 
 .image-div:nth-child(10n+7) {
-  height: 30em;
-  width: 35em;
+  height: 30vh;
+  width: 35vw;
 }
 
 /* ||- ending */
 .image-div:nth-child(10n+9) {
-  height: 30em;
-  width: 35em;
+  height: 30vh;
+  width: 35vw;
 }
 
 .image-div:nth-child(10n+10) {
-  height: 30em;
-  width: 40em;
+  height: 30vw;
+  width: 40vh;
 }
 
 footer {
@@ -190,4 +190,59 @@ footer {
 
 .social-icons a:hover {
   color: #f39c12;
+}
+
+/* === Responsive tweaks === */
+
+/* MOBILE: single column */
+@media (max-width: 768px) {
+  .image-div {
+    width: 90vw !important;
+  }
+}
+
+/* TABLET: single column */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .image-div {
+    width: 85vw !important;
+  }
+}
+
+/* LARGE DESKTOP: increase height slightly */
+@media (min-width: 1440px) {
+
+  .image-div:nth-child(10n+1),
+  .image-div:nth-child(10n+2),
+  .image-div:nth-child(10n+3) {
+    height: 50vh;
+  }
+
+  .image-div:nth-child(10n+4),
+  .image-div:nth-child(10n+5),
+  .image-div:nth-child(10n+6),
+  .image-div:nth-child(10n+7),
+  .image-div:nth-child(10n+8),
+  .image-div:nth-child(10n+9),
+  .image-div:nth-child(10n+10) {
+    height: 44vh;
+  }
+}
+
+@media (min-width: 1800px) {
+
+  .image-div:nth-child(10n+1),
+  .image-div:nth-child(10n+2),
+  .image-div:nth-child(10n+3) {
+    height: 60vh;
+  }
+
+  .image-div:nth-child(10n+4),
+  .image-div:nth-child(10n+5),
+  .image-div:nth-child(10n+6),
+  .image-div:nth-child(10n+7),
+  .image-div:nth-child(10n+8),
+  .image-div:nth-child(10n+9),
+  .image-div:nth-child(10n+10) {
+    height: 54vh;
+  }
 }
