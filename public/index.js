@@ -2,8 +2,9 @@ const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const gridContainer = document.querySelector(".grid-container");
 
-// --- Check admin status ---
 let admin = false;
+
+// Check admin status
 async function checkAdmin() {
   const res = await fetch("/is-admin");
   const data = await res.json();
@@ -15,7 +16,7 @@ async function checkAdmin() {
 }
 checkAdmin();
 
-// --- Load gallery ---
+// Load gallery
 async function loadGallery() {
   const res = await fetch("/images");
   const images = await res.json();
@@ -26,45 +27,50 @@ async function loadGallery() {
     div.className = "image-div";
     div.style.backgroundImage = `url('${url}')`;
 
-    if (admin) {
-      const delBtn = document.createElement("button");
-      delBtn.textContent = "🗑️";
-      delBtn.className = "delete-image-button";
-      div.appendChild(delBtn);
-
-      delBtn.addEventListener("click", async () => {
-        const filename = url.split("/").pop();
-        const res = await fetch(`/images/${filename}`, { method: "DELETE" });
-        const data = await res.json();
-        if (data.success) div.remove();
-      });
-    }
-
+    if (admin) addDeleteButton(div, url);
     gridContainer.appendChild(div);
   });
 
   if (admin) addUploadPlaceholders();
 }
 
-// --- Add upload placeholders ---
-function addUploadPlaceholders() {
-  const placeholderCount = 5;
-  for (let i = 0; i < placeholderCount; i++) {
-    const div = document.createElement("div");
-    div.className = "image-div";
-    div.style.backgroundImage = `url('graphical-assets/placeholder.jpg')`;
+// Add delete button
+function addDeleteButton(div, imageUrl) {
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "🗑️";
+  delBtn.className = "delete-image-button";
+  div.appendChild(delBtn);
 
-    const button = document.createElement("button");
-    button.className = "add-new-image-button";
-    button.textContent = "+";
-    div.appendChild(button);
-    gridContainer.appendChild(div);
-
-    button.addEventListener("click", handleImageUpload);
-  }
+  delBtn.addEventListener("click", async () => {
+    const filename = imageUrl.split("/").pop();
+    const res = await fetch(`/images/${filename}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) div.remove();
+    else alert("Failed to delete image");
+  });
 }
 
-// --- Upload handler ---
+// Add upload placeholders
+function addUploadPlaceholders() {
+  const placeholderCount = 3; // initial placeholders
+  for (let i = 0; i < placeholderCount; i++) addSingleUploadPlaceholder();
+}
+
+function addSingleUploadPlaceholder() {
+  const div = document.createElement("div");
+  div.className = "image-div";
+  div.style.backgroundImage = `url('graphical-assets/placeholder.jpg')`;
+
+  const button = document.createElement("button");
+  button.className = "add-new-image-button";
+  button.textContent = "+";
+  div.appendChild(button);
+  gridContainer.appendChild(div);
+
+  button.addEventListener("click", handleImageUpload);
+}
+
+// Upload handler
 async function handleImageUpload(e) {
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -82,57 +88,18 @@ async function handleImageUpload(e) {
 
     if (data.success) {
       const parentDiv = e.target.parentElement;
-
-      // Replace placeholder with uploaded image
       parentDiv.style.backgroundImage = `url('${data.url}')`;
-      e.target.remove(); // remove the "+" button
+      e.target.remove();
+      if (admin) addDeleteButton(parentDiv, data.url);
 
-      // 🗑 Add delete button if admin
-      if (admin) {
-        addDeleteButton(parentDiv, data.url);
-      }
-
-      // Add a new placeholder for next upload
-      addSingleUploadPlaceholder();
-    } else {
-      alert("Upload failed");
-    }
+      addSingleUploadPlaceholder(); // new placeholder
+    } else alert("Upload failed");
   };
 
   fileInput.click();
 }
 
-// Create a single new placeholder (used after every upload)
-function addSingleUploadPlaceholder() {
-  const div = document.createElement("div");
-  div.className = "image-div";
-  div.style.backgroundImage = `url('graphical-assets/placeholder.jpg')`;
-
-  const button = document.createElement("button");
-  button.className = "add-new-image-button";
-  button.textContent = "+";
-  div.appendChild(button);
-  gridContainer.appendChild(div);
-
-  button.addEventListener("click", handleImageUpload);
-}
-
-function addDeleteButton(div, imageUrl) {
-  const delBtn = document.createElement("button");
-  delBtn.textContent = "🗑️";
-  delBtn.className = "delete-image-button";
-  div.appendChild(delBtn);
-
-  delBtn.addEventListener("click", async () => {
-    const filename = imageUrl.split("/").pop();
-    const res = await fetch(`/images/${filename}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.success) div.remove();
-    else alert("Failed to delete image");
-  });
-}
-
-// --- Login/logout ---
+// Login / Logout
 loginBtn.addEventListener("click", async () => {
   const username = prompt("Username:");
   const password = prompt("Password:");
@@ -156,5 +123,5 @@ logoutBtn.addEventListener("click", async () => {
   location.reload();
 });
 
-// --- Init ---
+// Initialize gallery
 loadGallery();
