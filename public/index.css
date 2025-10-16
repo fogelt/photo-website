@@ -1,0 +1,152 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+}
+
+
+
+header {
+  display: flex;
+  /* horizontal layout */
+  justify-content: space-between;
+  /* push left and right items to edges */
+  align-items: center;
+  /* vertically center them */
+  padding: 2.8em 4%;
+  /* optional padding */
+  border-bottom: 1px solid #ccc;
+  /* optional underline */
+}
+
+header h1 {
+  letter-spacing: 0.15em;
+  margin: 0;
+  font-size: 2.5em;
+  font-family: "Alumni Sans Pinstripe", sans-serif;
+}
+
+header .right-items {
+  display: flex;
+  /* layout the p elements in a row */
+  gap: 2em;
+  /* space between about and portfölj */
+  margin: 0;
+}
+
+header .right-items p {
+  font-family: "Alumni Sans Pinstripe", sans-serif;
+  margin: 0;
+  font-size: 1em;
+}
+
+.grid-container {
+  display: flex;
+  flex-wrap: wrap;
+  width: 93%;
+  margin: 0 auto;
+  justify-content: center;
+  gap: 0.5em;
+}
+
+.image-div {
+  position: relative;
+  /* allows centering child button */
+  background-size: cover;
+  background-position: center;
+  height: 25em;
+  width: 35em;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Centered button */
+.add-new-image-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  width: 3em;
+  height: 3em;
+  font-size: 1.5em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delete-image-button {
+  position: absolute;
+  top: 0.6em;
+  right: 0.6em;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: white;
+  font-size: 1.2em;
+  border-radius: 50%;
+  cursor: pointer;
+  width: 2em;
+  height: 2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+.delete-image-button:hover {
+  background: rgba(255, 0, 0, 0.8);
+}
+
+/* Hover effect */
+.add-new-image-button:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* === Pattern repeats every 10 === */
+
+/* First three portraits taller (|||) */
+.image-div:nth-child(10n+1),
+.image-div:nth-child(10n+2),
+.image-div:nth-child(10n+3) {
+  height: 40em;
+  width: 25em;
+}
+
+/* Next two landscapes (-- ) */
+.image-div:nth-child(10n+4) {
+  height: 30em;
+  width: 40em;
+}
+
+.image-div:nth-child(10n+5) {
+  height: 30em;
+  width: 35em;
+}
+
+/* |-| style mix */
+.image-div:nth-child(10n+6),
+.image-div:nth-child(10n+8) {
+  height: 30em;
+  width: 20em;
+}
+
+.image-div:nth-child(10n+7) {
+  height: 30em;
+  width: 35em;
+}
+
+/* ||- ending */
+.image-div:nth-child(10n+9) {
+  height: 30em;
+  width: 35em;
+}
+
+.image-div:nth-child(10n+10) {
+  height: 30em;
+  width: 40em;
+}
