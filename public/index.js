@@ -16,6 +16,19 @@ async function checkAdmin() {
 }
 checkAdmin();
 
+// --- SECRET KEY UNLOCK ---
+let secret = "admin";
+let input = "";
+
+document.addEventListener("keydown", (e) => {
+  input += e.key.toLowerCase();
+  if (input.length > secret.length) input = input.slice(-secret.length);
+  if (input === secret) {
+    document.getElementById("login-btn").style.display = "inline-block";
+    alert("🔓 Admin button revealed");
+  }
+});
+
 // Load gallery
 async function loadGallery() {
   const res = await fetch("/images");
