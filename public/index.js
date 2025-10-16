@@ -26,7 +26,6 @@ async function loadGallery() {
     const div = document.createElement("div");
     div.className = "image-div";
     div.style.backgroundImage = `url('${url}')`;
-
     if (admin) addDeleteButton(div, url);
     gridContainer.appendChild(div);
   });
@@ -52,7 +51,7 @@ function addDeleteButton(div, imageUrl) {
 
 // Add upload placeholders
 function addUploadPlaceholders() {
-  const placeholderCount = 3; // initial placeholders
+  const placeholderCount = 3;
   for (let i = 0; i < placeholderCount; i++) addSingleUploadPlaceholder();
 }
 
@@ -92,7 +91,7 @@ async function handleImageUpload(e) {
       e.target.remove();
       if (admin) addDeleteButton(parentDiv, data.url);
 
-      addSingleUploadPlaceholder(); // new placeholder
+      addSingleUploadPlaceholder();
     } else alert("Upload failed");
   };
 

@@ -18,20 +18,15 @@ app.use(session({
 }));
 
 // -----------------------------
-// Determine uploads folder
-// -----------------------------
+// Uploads folder (persistent disk or fallback)
 let UPLOAD_DIR;
 if (fs.existsSync("/mnt/data")) {
-  // Persistent disk attached
   UPLOAD_DIR = path.join("/mnt/data", "uploads");
   console.log("Using persistent disk at", UPLOAD_DIR);
 } else {
-  // First deploy / no persistent disk
   UPLOAD_DIR = path.join(process.cwd(), "data", "uploads");
   console.log("Persistent disk not found, using local folder", UPLOAD_DIR);
 }
-
-// Create folder if it doesn't exist
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Serve static files
@@ -40,7 +35,6 @@ app.use("/uploads", express.static(UPLOAD_DIR));
 
 // -----------------------------
 // JSON DB for images
-// -----------------------------
 const IMAGE_DB = path.join("data", "images.json");
 if (!fs.existsSync("data")) fs.mkdirSync("data");
 if (!fs.existsSync(IMAGE_DB)) fs.writeFileSync(IMAGE_DB, "[]");
@@ -49,14 +43,25 @@ function loadImages() {
   try { return JSON.parse(fs.readFileSync(IMAGE_DB, "utf8")); }
   catch { return []; }
 }
-
 function saveImages(images) {
   fs.writeFileSync(IMAGE_DB, JSON.stringify(images, null, 2));
 }
 
+// Auto-load images from disk if DB empty
+function ensureImageDB() {
+  const images = loadImages();
+  if (images.length === 0 && fs.existsSync(UPLOAD_DIR)) {
+    const files = fs.readdirSync(UPLOAD_DIR)
+      .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
+      .map(f => `/uploads/${f}`);
+    saveImages(files);
+    console.log(`Initialized image list with ${files.length} files.`);
+  }
+}
+ensureImageDB();
+
 // -----------------------------
 // Admin Auth
-// -----------------------------
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
   if (username === process.env.ADMIN_USERNAME && password === process.env.ADMIN_PASSWORD) {
@@ -76,7 +81,6 @@ app.get("/is-admin", (req, res) => {
 
 // -----------------------------
 // Multer upload setup
-// -----------------------------
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
@@ -84,8 +88,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // -----------------------------
-// Upload route
-// -----------------------------
+// Routes
 app.post("/upload", upload.single("image"), (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -97,14 +100,8 @@ app.post("/upload", upload.single("image"), (req, res) => {
   res.json({ success: true, url: imageUrl });
 });
 
-// -----------------------------
-// Get all images
-// -----------------------------
 app.get("/images", (req, res) => res.json(loadImages()));
 
-// -----------------------------
-// Delete image
-// -----------------------------
 app.delete("/images/:filename", (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
 
@@ -119,9 +116,7 @@ app.delete("/images/:filename", (req, res) => {
   res.json({ success: true });
 });
 
-// -----------------------------
 // Serve HTML
-// -----------------------------
 app.get("/", (req, res) => res.sendFile(path.resolve("public/index.html")));
 
 const PORT = process.env.PORT || 3000;
