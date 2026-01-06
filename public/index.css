@@ -54,6 +54,19 @@ header .right-items p {
   font-size: 1em;
 }
 
+header .right-items a {
+  font-family: "Alumni Sans Pinstripe", sans-serif;
+  margin: 0;
+  font-size: 1em;
+  color: inherit;
+  text-decoration: none;
+}
+
+header .right-items a.active {
+  text-decoration: underline;
+  font-weight: bold;
+}
+
 .grid-container {
   display: flex;
   flex-wrap: wrap;
@@ -190,6 +203,110 @@ footer {
 
 .social-icons a:hover {
   color: #f39c12;
+}
+
+.weddings-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6em;
+  width: 93%;
+  margin: 0.5em auto 2em;
+}
+
+.weddings-gallery .image-div {
+  height: 200px;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.about-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.6em;
+  width: 93%;
+  margin: 0.5em auto 2em;
+}
+
+.about-gallery .image-div {
+  height: 200px;
+  width: 100%;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Two-column layout for sections (images left - text right). Left column uses 50vw for wider images */
+.section-inner {
+  display: flex;
+  gap: 1.2em;
+  width: 100%;
+  max-width: 100vw;
+  margin: 0.5em auto 2em;
+  align-items: stretch;
+}
+
+/* Left column is fixed to 50vw so images take half the viewport width */
+.section-left {
+  width: 50vw;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+}
+
+/* Right column fills remaining space */
+.section-right {
+  flex: 1;
+  min-width: 280px;
+  padding-left: 1em;
+}
+
+/* Galleries inside the left column stack vertically and share space */
+.section-left .weddings-gallery,
+.section-left .about-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.section-left .image-div {
+  width: 100%;
+  flex: 1 1 0;
+  min-height: 50vh;
+  border-radius: 6px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+}
+
+.section-right .about-text,
+.section-right .weddings-text {
+  padding: 0;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 900px) {
+  .section-inner {
+    flex-direction: column;
+  }
+  .section-left, .section-right {
+    width: 100%;
+  }
+  .section-left .image-div {
+    width: 100%;
+    height: 40vh;
+  }
+}
+
+.about-text-content textarea {
+  width: 100%;
+  margin-top: 0.5em;
+}
+
+.about-text-content button {
+  margin-top: 0.5em;
 }
 
 /* === Responsive tweaks === */

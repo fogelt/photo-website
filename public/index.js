@@ -13,6 +13,8 @@ async function checkAdmin() {
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-block";
   }
+  // refresh view based on admin state
+  router();
 }
 checkAdmin();
 
@@ -46,8 +48,8 @@ async function loadGallery() {
   if (admin) addUploadPlaceholders();
 }
 
-// Add delete button
-function addDeleteButton(div, imageUrl) {
+// Add delete button (supports section-aware deletions)
+function addDeleteButton(div, imageUrl, section) {
   const delBtn = document.createElement("button");
   delBtn.textContent = "🗑️";
   delBtn.className = "delete-image-button";
@@ -55,9 +57,18 @@ function addDeleteButton(div, imageUrl) {
 
   delBtn.addEventListener("click", async () => {
     const filename = imageUrl.split("/").pop();
-    const res = await fetch(`/images/${filename}`, { method: "DELETE" });
+    let endpoint = '';
+    if (section === 'about') endpoint = `/api/about/images/${filename}`;
+    else if (section === 'weddings') endpoint = `/api/weddings/images/${filename}`;
+    else endpoint = `/images/${filename}`;
+
+    const res = await fetch(endpoint, { method: "DELETE" });
     const data = await res.json();
-    if (data.success) div.remove();
+    if (data.success) {
+      div.remove();
+      // refresh to ensure placeholders / slots are correct
+      router();
+    }
     else alert("Failed to delete image");
   });
 }
@@ -82,7 +93,7 @@ function addSingleUploadPlaceholder() {
   button.addEventListener("click", handleImageUpload);
 }
 
-// Upload handler
+// Upload handler (supports section-specific uploads)
 async function handleImageUpload(e) {
   const fileInput = document.createElement("input");
   fileInput.type = "file";
@@ -95,16 +106,27 @@ async function handleImageUpload(e) {
     const formData = new FormData();
     formData.append("image", file);
 
-    const res = await fetch("/upload", { method: "POST", body: formData });
+    const section = e.target.dataset.section; // 'about' | 'weddings' | undefined
+
+    let uploadEndpoint = "/upload";
+    if (section === 'about') uploadEndpoint = '/api/about/upload';
+    else if (section === 'weddings') uploadEndpoint = '/api/weddings/upload';
+
+    const res = await fetch(uploadEndpoint, { method: "POST", body: formData });
     const data = await res.json();
 
     if (data.success) {
       const parentDiv = e.target.parentElement;
       parentDiv.style.backgroundImage = `url('${data.url}')`;
       e.target.remove();
-      if (admin) addDeleteButton(parentDiv, data.url);
+      if (admin) addDeleteButton(parentDiv, data.url, section);
 
-      addSingleUploadPlaceholder();
+      if (section) {
+        // refresh section view so the slot counts stay consistent
+        router();
+      } else {
+        addSingleUploadPlaceholder();
+      }
     } else alert("Upload failed");
   };
 
@@ -125,7 +147,8 @@ loginBtn.addEventListener("click", async () => {
     admin = true;
     loginBtn.style.display = "none";
     logoutBtn.style.display = "inline-block";
-    loadGallery();
+    // refresh current view so admin controls appear where applicable
+    router();
   } else alert("Invalid credentials");
 });
 
@@ -135,5 +158,201 @@ logoutBtn.addEventListener("click", async () => {
   location.reload();
 });
 
-// Initialize gallery
-loadGallery();
+// Routing
+function navigateTo(url) {
+  history.pushState(null, null, url);
+  router();
+}
+
+async function router() {
+  const path = location.pathname;
+  // Update active nav links
+  document.querySelectorAll('.right-items a').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === path);
+  });
+
+  if (path === '/about') {
+    renderAbout();
+  } else if (path === '/weddings') {
+    await renderWeddings();
+  } else {
+    await loadGallery();
+  }
+}
+
+// create a small upload placeholder inside any container
+function addSingleUploadPlaceholderTo(container, section) {
+  const div = document.createElement("div");
+  div.className = "image-div";
+  div.style.backgroundImage = `url('graphical-assets/placeholder.jpg')`;
+
+  const button = document.createElement("button");
+  button.className = "add-new-image-button";
+  button.textContent = "+";
+  // mark which section this placeholder uploads to
+  if (section) button.dataset.section = section;
+
+  div.appendChild(button);
+  container.appendChild(div);
+
+  button.addEventListener("click", handleImageUpload);
+}
+
+async function renderWeddings() {
+  const res = await fetch('/api/weddings');
+  const data = await res.json();
+  const images = data.images || [];
+  const text = data.text || '';
+  const selected = images.slice(0, 2); // show two per request
+
+  gridContainer.innerHTML = `
+    <section class="weddings">
+      <div class="section-inner">
+        <div class="section-left">
+          <div class="weddings-gallery"></div>
+        </div>
+        <div class="section-right">
+          <div class="about-text" style="line-height:1.6;">
+            <h2>Bröllop</h2>
+            <div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const gallery = document.querySelector('.weddings-gallery');
+  selected.forEach(url => {
+    const div = document.createElement('div');
+    div.className = 'image-div';
+    div.style.backgroundImage = `url('${url}')`;
+    gallery.appendChild(div);
+    if (admin) addDeleteButton(div, url, 'weddings');
+  });
+
+  if (admin) {
+    // add placeholders only for missing slots up to 2
+    for (let i = 0; i < Math.max(0, 2 - selected.length); i++) addSingleUploadPlaceholderTo(gallery, 'weddings');
+    // add edit text button
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Redigera text';
+    editBtn.style.marginTop = '0.6em';
+    document.querySelector('.weddings-text').appendChild(editBtn);
+
+    editBtn.addEventListener('click', () => {
+      const cur = data.text || '';
+      const textarea = document.createElement('textarea');
+      textarea.value = cur;
+      textarea.style.width = '100%';
+      textarea.style.height = '160px';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Save';
+      saveBtn.style.marginRight = '0.5em';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+
+      const container = document.querySelector('.weddings-text');
+      container.innerHTML = '';
+      container.appendChild(textarea);
+      container.appendChild(saveBtn);
+      container.appendChild(cancelBtn);
+
+      saveBtn.addEventListener('click', async () => {
+        const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+        const data = await res.json();
+        if (data.success) router(); else alert('Save failed');
+      });
+
+      cancelBtn.addEventListener('click', () => router());
+    });
+  }
+}
+
+async function renderAbout() {
+  const res = await fetch('/api/about');
+  const data = await res.json();
+  const images = data.images || [];
+  const text = data.text || '';
+  const selected = images.slice(0, 2);
+
+  gridContainer.innerHTML = `
+    <section class="about">
+      <div class="section-inner">
+        <div class="section-left">
+          <div class="about-gallery"></div>
+        </div>
+        <div class="section-right">
+          <div class="about-text" style="line-height:1.6;">
+            <h2>Om mig</h2>
+            <div class="about-text-content">${text.replace(/\n/g, '<br>')}<br></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  const gallery = document.querySelector('.about-gallery');
+  selected.forEach(url => {
+    const div = document.createElement('div');
+    div.className = 'image-div';
+    div.style.backgroundImage = `url('${url}')`;
+    gallery.appendChild(div);
+    if (admin) addDeleteButton(div, url, 'about');
+  });
+
+  if (admin) {
+    // add placeholders only for missing slots up to 2
+    for (let i = 0; i < Math.max(0, 2 - selected.length); i++) addSingleUploadPlaceholderTo(gallery, 'about');
+
+    // edit text button
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit text';
+    editBtn.style.marginTop = '0.6em';
+    document.querySelector('.about-text-content').appendChild(editBtn);
+
+    editBtn.addEventListener('click', () => {
+      const cur = text || '';
+      const textarea = document.createElement('textarea');
+      textarea.value = cur;
+      textarea.style.width = '100%';
+      textarea.style.height = '160px';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Save';
+      saveBtn.style.marginRight = '0.5em';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+
+      const container = document.querySelector('.about-text-content');
+      container.innerHTML = '';
+      container.appendChild(textarea);
+      container.appendChild(saveBtn);
+      container.appendChild(cancelBtn);
+
+      saveBtn.addEventListener('click', async () => {
+        const res = await fetch('/api/about/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+        const data = await res.json();
+        if (data.success) router(); else alert('Save failed');
+      });
+
+      cancelBtn.addEventListener('click', () => router());
+    });
+  }
+}
+
+// intercept navigation for data-link anchors
+document.addEventListener('click', (e) => {
+  const link = e.target.closest('[data-link]');
+  if (link) {
+    e.preventDefault();
+    navigateTo(link.getAttribute('href'));
+  }
+});
+
+window.addEventListener('popstate', router);
+
+// start
+router();

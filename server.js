@@ -116,8 +116,102 @@ app.delete("/images/:filename", (req, res) => {
   res.json({ success: true });
 });
 
+// -----------------------------
+// Per-section image & text stores (about / wedding)
+const ABOUT_IMAGES_DB = path.join("data", "about_images.json");
+const WEDDING_IMAGES_DB = path.join("data", "wedding_images.json");
+const ABOUT_TEXT_DB = path.join("data", "about_text.json");
+const WEDDING_TEXT_DB = path.join("data", "wedding_text.json");
+
+if (!fs.existsSync(ABOUT_IMAGES_DB)) fs.writeFileSync(ABOUT_IMAGES_DB, "[]");
+if (!fs.existsSync(WEDDING_IMAGES_DB)) fs.writeFileSync(WEDDING_IMAGES_DB, "[]");
+if (!fs.existsSync(ABOUT_TEXT_DB)) fs.writeFileSync(ABOUT_TEXT_DB, JSON.stringify({ text: "About text goes here." }, null, 2));
+if (!fs.existsSync(WEDDING_TEXT_DB)) fs.writeFileSync(WEDDING_TEXT_DB, JSON.stringify({ text: "Weddings text goes here." }, null, 2));
+
+function loadJson(filePath, fallback) {
+  try { return JSON.parse(fs.readFileSync(filePath, "utf8")); }
+  catch { return fallback; }
+}
+function saveJson(filePath, data) {
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
+
+// --- ABOUT API ---
+app.get("/api/about", (req, res) => {
+  const textObj = loadJson(ABOUT_TEXT_DB, { text: "" });
+  const images = loadJson(ABOUT_IMAGES_DB, []);
+  res.json({ text: textObj.text, images });
+});
+
+app.post("/api/about/text", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const { text } = req.body;
+  saveJson(ABOUT_TEXT_DB, { text: text || "" });
+  res.json({ success: true });
+});
+
+app.post("/api/about/upload", upload.single("image"), (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const images = loadJson(ABOUT_IMAGES_DB, []);
+  const imageUrl = `/uploads/${req.file.filename}`;
+  images.push(imageUrl);
+  saveJson(ABOUT_IMAGES_DB, images);
+  res.json({ success: true, url: imageUrl });
+});
+
+app.get("/api/about/images", (req, res) => res.json(loadJson(ABOUT_IMAGES_DB, [])));
+
+app.delete("/api/about/images/:filename", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const filename = req.params.filename;
+  const images = loadJson(ABOUT_IMAGES_DB, []);
+  const updated = images.filter(img => !img.endsWith(filename));
+  const filePath = path.join(UPLOAD_DIR, filename);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  saveJson(ABOUT_IMAGES_DB, updated);
+  res.json({ success: true });
+});
+
+// --- WEDDINGS API ---
+app.get("/api/weddings", (req, res) => {
+  const textObj = loadJson(WEDDING_TEXT_DB, { text: "" });
+  const images = loadJson(WEDDING_IMAGES_DB, []);
+  res.json({ text: textObj.text, images });
+});
+
+app.post("/api/weddings/text", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const { text } = req.body;
+  saveJson(WEDDING_TEXT_DB, { text: text || "" });
+  res.json({ success: true });
+});
+
+app.post("/api/weddings/upload", upload.single("image"), (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const images = loadJson(WEDDING_IMAGES_DB, []);
+  const imageUrl = `/uploads/${req.file.filename}`;
+  images.push(imageUrl);
+  saveJson(WEDDING_IMAGES_DB, images);
+  res.json({ success: true, url: imageUrl });
+});
+
+app.get("/api/weddings/images", (req, res) => res.json(loadJson(WEDDING_IMAGES_DB, [])));
+
+app.delete("/api/weddings/images/:filename", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const filename = req.params.filename;
+  const images = loadJson(WEDDING_IMAGES_DB, []);
+  const updated = images.filter(img => !img.endsWith(filename));
+  const filePath = path.join(UPLOAD_DIR, filename);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  saveJson(WEDDING_IMAGES_DB, updated);
+  res.json({ success: true });
+});
+
 // Serve HTML
 app.get("/", (req, res) => res.sendFile(path.resolve("public/index.html")));
+app.get("/about", (req, res) => res.sendFile(path.resolve("public/index.html")));
+app.get("/weddings", (req, res) => res.sendFile(path.resolve("public/index.html")));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));

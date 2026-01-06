@@ -19,7 +19,7 @@ Thumbs.db
 uploads/
 
 # Data files (optional: if you don't want JSON DB in GitHub)
-data/images.json
+data/
 
 # Build output (if you ever add build tools)
 dist/
