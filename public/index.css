@@ -229,8 +229,6 @@ footer {
   line-height: 1.6;
 }
 
-
-
 /* Preserve leading spaces and newlines so editors can use spacebars to align text */
 .weddings-text, .about-text-content {
   white-space: pre-wrap;
@@ -241,14 +239,14 @@ footer {
   gap: 0.6em;
   width: 100%; /* fill left column */
   margin: 0.5em 0;
+  height: 65vh;
 }
 
 /* Ensure About layout vertically centers content relative to the portrait */
 .about .section-inner {
   align-items: center;
-  height: 60vh; /* portrait-style tall image */
-  width: 100%;
-  border-radius: 6px;
+  height: 65vh; /* portrait-style tall image */
+  width: 90%;
   overflow: hidden;
   background-size: cover;
   background-position: center;
@@ -274,8 +272,7 @@ footer {
 
 /* About portrait sizing */
 .about .section-left .image-div {
-  height: 60vh; /* portrait height */
-  max-height: 80vh;
+  height: 100%; /* portrait height */
   width: 100%;
   margin-right: 10%;
   overflow: hidden;
