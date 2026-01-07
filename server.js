@@ -27,14 +27,14 @@ const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 // Create section subfolders for organized uploads
-['portfolio', 'about', 'weddings'].forEach(sub => {
+['portfolio', 'about', 'weddings', 'portratt'].forEach(sub => {
   const p = path.join(UPLOAD_DIR, sub);
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
 
 // Migrate legacy JSON files from project ./data to persistent DATA_DIR if present
 const LEGACY_DATA_DIR = path.join(process.cwd(), 'data');
-['images.json', 'about_images.json', 'wedding_images.json', 'about_text.json', 'wedding_text.json'].forEach(fname => {
+['images.json', 'about_images.json', 'wedding_images.json', 'portratt_images.json', 'about_text.json', 'wedding_text.json'].forEach(fname => {
   const legacyPath = path.join(LEGACY_DATA_DIR, fname);
   const newPath = path.join(DATA_DIR, fname);
   if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
@@ -104,12 +104,13 @@ const storage = multer.diskStorage({
 
     // 1) prefer explicit query param: ?section=about|weddings|portfolio
     const q = (req.query && req.query.section) ? String(req.query.section).toLowerCase() : null;
-    if (q === 'about' || q === 'weddings' || q === 'portfolio') sub = q;
+    if (q === 'about' || q === 'weddings' || q === 'portfolio' || q === 'portratt') sub = q;
     else {
       // 2) fallback to URL detection
       const orig = (req.originalUrl || req.url || '').toLowerCase();
       if (orig.includes('/api/about')) sub = 'about';
       else if (orig.includes('/api/weddings')) sub = 'weddings';
+      else if (orig.includes('/api/portratt')) sub = 'portratt';
     }
 
     const dest = path.join(UPLOAD_DIR, sub);
@@ -150,7 +151,7 @@ app.delete("/images/:filename", (req, res) => {
   const updated = images.filter(img => !img.endsWith(filename));
 
   // Try removing from known locations (root, portfolio, about, weddings)
-  const candidates = [path.join(UPLOAD_DIR, filename), path.join(UPLOAD_DIR, 'portfolio', filename), path.join(UPLOAD_DIR, 'about', filename), path.join(UPLOAD_DIR, 'weddings', filename)];
+  const candidates = [path.join(UPLOAD_DIR, filename), path.join(UPLOAD_DIR, 'portfolio', filename), path.join(UPLOAD_DIR, 'about', filename), path.join(UPLOAD_DIR, 'weddings', filename), path.join(UPLOAD_DIR, 'portratt', filename)];
   for (const fp of candidates) if (fs.existsSync(fp)) fs.unlinkSync(fp);
 
   saveImages(updated);
@@ -161,11 +162,13 @@ app.delete("/images/:filename", (req, res) => {
 // Per-section image & text stores (about / wedding) stored in DATA_DIR
 const ABOUT_IMAGES_DB = path.join(DATA_DIR, "about_images.json");
 const WEDDING_IMAGES_DB = path.join(DATA_DIR, "wedding_images.json");
+const PORTRATT_IMAGES_DB = path.join(DATA_DIR, "portratt_images.json");
 const ABOUT_TEXT_DB = path.join(DATA_DIR, "about_text.json");
 const WEDDING_TEXT_DB = path.join(DATA_DIR, "wedding_text.json");
 
 if (!fs.existsSync(ABOUT_IMAGES_DB)) fs.writeFileSync(ABOUT_IMAGES_DB, "[]");
 if (!fs.existsSync(WEDDING_IMAGES_DB)) fs.writeFileSync(WEDDING_IMAGES_DB, "[]");
+if (!fs.existsSync(PORTRATT_IMAGES_DB)) fs.writeFileSync(PORTRATT_IMAGES_DB, "[]");
 if (!fs.existsSync(ABOUT_TEXT_DB)) fs.writeFileSync(ABOUT_TEXT_DB, JSON.stringify({ text: "About text goes here." }, null, 2));
 if (!fs.existsSync(WEDDING_TEXT_DB)) fs.writeFileSync(WEDDING_TEXT_DB, JSON.stringify({ text: "Weddings text goes here." }, null, 2));
 
@@ -193,6 +196,7 @@ function ensureSectionDB(dirName, dbPath) {
 }
 ensureSectionDB('about', ABOUT_IMAGES_DB);
 ensureSectionDB('weddings', WEDDING_IMAGES_DB);
+ensureSectionDB('portratt', PORTRATT_IMAGES_DB);
 
 // If uploads contain text files for sections, prefer initializing DB text from them (useful if someone manually uploaded a .txt)
 function ensureSectionText(dirName, dbPath, filename) {
@@ -263,6 +267,35 @@ app.get("/api/weddings", (req, res) => {
   res.json({ text: textObj.text, images });
 });
 
+// --- PORTRATT API ---
+app.get("/api/portratt", (req, res) => {
+  const images = loadJson(PORTRATT_IMAGES_DB, []);
+  res.json({ images });
+});
+
+app.post("/api/portratt/upload", upload.single("image"), (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const images = loadJson(PORTRATT_IMAGES_DB, []);
+  const sub = req.uploadSubdir || 'portratt';
+  const imageUrl = `/uploads/${sub}/${req.file.filename}`;
+  images.push(imageUrl);
+  saveJson(PORTRATT_IMAGES_DB, images);
+  res.json({ success: true, url: imageUrl });
+});
+
+app.get("/api/portratt/images", (req, res) => res.json(loadJson(PORTRATT_IMAGES_DB, [])));
+
+app.delete("/api/portratt/images/:filename", (req, res) => {
+  if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
+  const filename = req.params.filename;
+  const images = loadJson(PORTRATT_IMAGES_DB, []);
+  const updated = images.filter(img => !img.endsWith(filename));
+  const filePath = path.join(UPLOAD_DIR, 'portratt', filename);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  saveJson(PORTRATT_IMAGES_DB, updated);
+  res.json({ success: true });
+});
+
 app.post("/api/weddings/text", (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
   const { text } = req.body;
@@ -307,6 +340,7 @@ app.delete("/api/weddings/images/:filename", (req, res) => {
 app.get("/", (req, res) => res.sendFile(path.resolve("public/index.html")));
 app.get("/about", (req, res) => res.sendFile(path.resolve("public/index.html")));
 app.get("/weddings", (req, res) => res.sendFile(path.resolve("public/index.html")));
+app.get("/portratt", (req, res) => res.sendFile(path.resolve("public/index.html")));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));

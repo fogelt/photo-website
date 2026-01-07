@@ -51,8 +51,9 @@ document.addEventListener("keydown", (e) => {
 async function loadGallery() {
   const res = await fetch("/images");
   const images = await res.json();
-  // ensure weddings grid styles are removed when showing main gallery
+  // ensure weddings and portratt grid styles are removed when showing main gallery
   gridContainer.classList.remove('weddings-portfolio');
+  gridContainer.classList.remove('portratt-portfolio');
   gridContainer.innerHTML = "";
 
   images.forEach(url => {
@@ -78,6 +79,7 @@ function addDeleteButton(div, imageUrl, section) {
     let endpoint = '';
     if (section === 'about') endpoint = `/api/about/images/${filename}`;
     else if (section === 'weddings') endpoint = `/api/weddings/images/${filename}`;
+    else if (section === 'portratt') endpoint = `/api/portratt/images/${filename}`;
     else endpoint = `/images/${filename}`;
 
     const res = await fetch(endpoint, { method: "DELETE" });
@@ -129,6 +131,7 @@ async function handleImageUpload(e) {
     let uploadEndpoint = "/upload";
     if (section === 'about') uploadEndpoint = '/api/about/upload';
     else if (section === 'weddings') uploadEndpoint = '/api/weddings/upload';
+    else if (section === 'portratt') uploadEndpoint = '/api/portratt/upload';
 
     // include explicit section in query (more reliable) and as form field
     if (section) {
@@ -201,6 +204,8 @@ async function router() {
     renderAbout();
   } else if (path === '/weddings') {
     await renderWeddings();
+  } else if (path === '/portratt') {
+    await renderPortratt();
   } else {
     await loadGallery();
   }
@@ -231,10 +236,13 @@ async function renderWeddings() {
   const text = data.text || '';
 
   // Render weddings like portfolio: flat grid, insert text after 3rd image
+  // ensure other section styles are cleared
+  gridContainer.classList.remove('portratt-portfolio');
   gridContainer.classList.add('weddings-portfolio');
   gridContainer.innerHTML = '';
 
   let textInserted = false;
+
   images.forEach((url, idx) => {
     const div = document.createElement('div');
     div.className = 'image-div';
@@ -337,6 +345,130 @@ async function renderWeddings() {
   }
 }
 
+// Porträtt: simple gallery like main portfolio but uses its own endpoint and slightly different sizing
+async function renderPortratt() {
+  const res = await fetch('/api/portratt');
+  const data = await res.json();
+  const images = data.images || [];
+
+  gridContainer.classList.remove('weddings-portfolio');
+  gridContainer.classList.add('portratt-portfolio');
+  gridContainer.innerHTML = '';
+
+  images.forEach(url => {
+    const div = document.createElement('div');
+    div.className = 'image-div';
+    div.style.backgroundImage = `url('${url}')`;
+    if (admin) addDeleteButton(div, url, 'portratt');
+    gridContainer.appendChild(div);
+  });
+
+  if (admin) {
+    // admin can upload to portratt
+    for (let i = 0; i < 3; i++) addSingleUploadPlaceholderTo(gridContainer, 'portratt');
+  }
+}
+images.forEach((url, idx) => {
+  const div = document.createElement('div');
+  div.className = 'image-div';
+  div.style.backgroundImage = `url('${url}')`;
+  if (admin) addDeleteButton(div, url, 'weddings');
+  gridContainer.appendChild(div);
+
+  if (idx === 2) {
+    const textDiv = document.createElement('div');
+    textDiv.className = 'weddings-text-block';
+    textDiv.innerHTML = `<div class="weddings-text">${formatText(text)}</div>`;
+    gridContainer.appendChild(textDiv);
+
+    if (admin) {
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Redigera text';
+      editBtn.style.marginTop = '0.6em';
+      textDiv.querySelector('.weddings-text').appendChild(editBtn);
+
+      editBtn.addEventListener('click', () => {
+        const cur = data.text || '';
+        const textarea = document.createElement('textarea');
+        textarea.value = cur;
+        textarea.style.width = '100%';
+        textarea.style.height = '160px';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.style.marginRight = '0.5em';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+
+        const container = textDiv.querySelector('.weddings-text');
+        container.innerHTML = '';
+        container.appendChild(textarea);
+        container.appendChild(saveBtn);
+        container.appendChild(cancelBtn);
+
+        saveBtn.addEventListener('click', async () => {
+          const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+          const data = await res.json();
+          if (data.success) router(); else alert('Save failed');
+        });
+
+        cancelBtn.addEventListener('click', () => router());
+      });
+    }
+
+    textInserted = true;
+  }
+});
+
+if (!textInserted) {
+  const textDiv = document.createElement('div');
+  textDiv.className = 'weddings-text-block';
+  textDiv.innerHTML = `<div class="weddings-text">${formatText(text)}</div>`;
+  gridContainer.appendChild(textDiv);
+
+  if (admin) {
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Redigera text';
+    editBtn.style.marginTop = '0.6em';
+    textDiv.querySelector('.weddings-text').appendChild(editBtn);
+
+    editBtn.addEventListener('click', () => {
+      const cur = data.text || '';
+      const textarea = document.createElement('textarea');
+      textarea.value = cur;
+      textarea.style.width = '100%';
+      textarea.style.height = '160px';
+
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Save';
+      saveBtn.style.marginRight = '0.5em';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+
+      const container = textDiv.querySelector('.weddings-text');
+      container.innerHTML = '';
+      container.appendChild(textarea);
+      container.appendChild(saveBtn);
+      container.appendChild(cancelBtn);
+
+      saveBtn.addEventListener('click', async () => {
+        const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+        const data = await res.json();
+        if (data.success) router(); else alert('Save failed');
+      });
+
+      cancelBtn.addEventListener('click', () => router());
+    });
+  }
+}
+
+if (admin) {
+  // allow adding more images to the weddings section
+  for (let i = 0; i < 3; i++) addSingleUploadPlaceholderTo(gridContainer, 'weddings');
+}
+
 async function renderAbout() {
   const res = await fetch('/api/about');
   const data = await res.json();
@@ -344,8 +476,9 @@ async function renderAbout() {
   const text = data.text || '';
   const selected = images.slice(0, 1); // only one portrait image
 
-  // ensure weddings styles are cleared before switching to About layout
+  // ensure weddings and portratt styles are cleared before switching to About layout
   gridContainer.classList.remove('weddings-portfolio');
+  gridContainer.classList.remove('portratt-portfolio');
   gridContainer.innerHTML = `
     <section class="about">
       <div class="section-inner">
