@@ -228,6 +228,12 @@ footer {
   line-height: 1.6;
 }
 
+/* Preserve leading spaces and newlines so editors can use spacebars to align text */
+.weddings-text, .about-text-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .about-gallery {
   display: block;
   gap: 0.6em;

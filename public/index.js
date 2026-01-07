@@ -16,8 +16,8 @@ function formatText(text) {
     .replace(/'/g, '&#39;');
   // convert **bold** to <strong>
   const bold = esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  // preserve newlines
-  return bold.replace(/\n/g, '<br>');
+  // preserve whitespace and newlines via CSS (white-space: pre-wrap)
+  return bold;
 }
 
 // Check admin status
