@@ -203,70 +203,110 @@ async function renderWeddings() {
   const data = await res.json();
   const images = data.images || [];
   const text = data.text || '';
-  const selected = images.slice(0, 2); // show two per request
 
-  gridContainer.innerHTML = `
-    <section class="weddings">
-      <div class="section-inner">
-        <div class="section-left">
-          <div class="weddings-gallery"></div>
-        </div>
-        <div class="section-right">
-          <div class="about-text" style="line-height:1.6;">
-            <h2>Bröllop</h2>
-            <div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>
-          </div>
-        </div>
-      </div>
-    </section>
-  `;
+  // Render weddings like portfolio: flat grid, insert text after 3rd image
+  gridContainer.innerHTML = '';
 
-  const gallery = document.querySelector('.weddings-gallery');
-  selected.forEach(url => {
+  let textInserted = false;
+  images.forEach((url, idx) => {
     const div = document.createElement('div');
     div.className = 'image-div';
     div.style.backgroundImage = `url('${url}')`;
-    gallery.appendChild(div);
     if (admin) addDeleteButton(div, url, 'weddings');
+    gridContainer.appendChild(div);
+
+    if (idx === 2) {
+      const textDiv = document.createElement('div');
+      textDiv.className = 'weddings-text-block';
+      textDiv.innerHTML = `<div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>`;
+      gridContainer.appendChild(textDiv);
+
+      if (admin) {
+        const editBtn = document.createElement('button');
+        editBtn.textContent = 'Redigera text';
+        editBtn.style.marginTop = '0.6em';
+        textDiv.querySelector('.weddings-text').appendChild(editBtn);
+
+        editBtn.addEventListener('click', () => {
+          const cur = data.text || '';
+          const textarea = document.createElement('textarea');
+          textarea.value = cur;
+          textarea.style.width = '100%';
+          textarea.style.height = '160px';
+
+          const saveBtn = document.createElement('button');
+          saveBtn.textContent = 'Save';
+          saveBtn.style.marginRight = '0.5em';
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.textContent = 'Cancel';
+
+          const container = textDiv.querySelector('.weddings-text');
+          container.innerHTML = '';
+          container.appendChild(textarea);
+          container.appendChild(saveBtn);
+          container.appendChild(cancelBtn);
+
+          saveBtn.addEventListener('click', async () => {
+            const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+            const data = await res.json();
+            if (data.success) router(); else alert('Save failed');
+          });
+
+          cancelBtn.addEventListener('click', () => router());
+        });
+      }
+
+      textInserted = true;
+    }
   });
 
-  if (admin) {
-    // add placeholders only for missing slots up to 2
-    for (let i = 0; i < Math.max(0, 2 - selected.length); i++) addSingleUploadPlaceholderTo(gallery, 'weddings');
-    // add edit text button
-    const editBtn = document.createElement('button');
-    editBtn.textContent = 'Redigera text';
-    editBtn.style.marginTop = '0.6em';
-    document.querySelector('.weddings-text').appendChild(editBtn);
+  if (!textInserted) {
+    const textDiv = document.createElement('div');
+    textDiv.className = 'weddings-text-block';
+    textDiv.innerHTML = `<div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>`;
+    gridContainer.appendChild(textDiv);
 
-    editBtn.addEventListener('click', () => {
-      const cur = data.text || '';
-      const textarea = document.createElement('textarea');
-      textarea.value = cur;
-      textarea.style.width = '100%';
-      textarea.style.height = '160px';
+    if (admin) {
+      const editBtn = document.createElement('button');
+      editBtn.textContent = 'Redigera text';
+      editBtn.style.marginTop = '0.6em';
+      textDiv.querySelector('.weddings-text').appendChild(editBtn);
 
-      const saveBtn = document.createElement('button');
-      saveBtn.textContent = 'Save';
-      saveBtn.style.marginRight = '0.5em';
+      editBtn.addEventListener('click', () => {
+        const cur = data.text || '';
+        const textarea = document.createElement('textarea');
+        textarea.value = cur;
+        textarea.style.width = '100%';
+        textarea.style.height = '160px';
 
-      const cancelBtn = document.createElement('button');
-      cancelBtn.textContent = 'Cancel';
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = 'Save';
+        saveBtn.style.marginRight = '0.5em';
 
-      const container = document.querySelector('.weddings-text');
-      container.innerHTML = '';
-      container.appendChild(textarea);
-      container.appendChild(saveBtn);
-      container.appendChild(cancelBtn);
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
 
-      saveBtn.addEventListener('click', async () => {
-        const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
-        const data = await res.json();
-        if (data.success) router(); else alert('Save failed');
+        const container = textDiv.querySelector('.weddings-text');
+        container.innerHTML = '';
+        container.appendChild(textarea);
+        container.appendChild(saveBtn);
+        container.appendChild(cancelBtn);
+
+        saveBtn.addEventListener('click', async () => {
+          const res = await fetch('/api/weddings/text', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textarea.value }) });
+          const data = await res.json();
+          if (data.success) router(); else alert('Save failed');
+        });
+
+        cancelBtn.addEventListener('click', () => router());
       });
+    }
+  }
 
-      cancelBtn.addEventListener('click', () => router());
-    });
+  if (admin) {
+    // allow adding more images to the weddings section
+    for (let i = 0; i < 3; i++) addSingleUploadPlaceholderTo(gridContainer, 'weddings');
   }
 }
 
@@ -275,7 +315,7 @@ async function renderAbout() {
   const data = await res.json();
   const images = data.images || [];
   const text = data.text || '';
-  const selected = images.slice(0, 2);
+  const selected = images.slice(0, 1); // only one portrait image
 
   gridContainer.innerHTML = `
     <section class="about">
@@ -303,8 +343,8 @@ async function renderAbout() {
   });
 
   if (admin) {
-    // add placeholders only for missing slots up to 2
-    for (let i = 0; i < Math.max(0, 2 - selected.length); i++) addSingleUploadPlaceholderTo(gallery, 'about');
+    // add placeholders only for missing slots up to 1
+    for (let i = 0; i < Math.max(0, 1 - selected.length); i++) addSingleUploadPlaceholderTo(gallery, 'about');
 
     // edit text button
     const editBtn = document.createElement('button');

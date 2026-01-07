@@ -18,25 +18,40 @@ app.use(session({
 }));
 
 // -----------------------------
-// Uploads folder (persistent disk or fallback)
-let UPLOAD_DIR;
-if (fs.existsSync("/mnt/data")) {
-  UPLOAD_DIR = path.join("/mnt/data", "uploads");
-  console.log("Using persistent disk at", UPLOAD_DIR);
-} else {
-  UPLOAD_DIR = path.join(process.cwd(), "data", "uploads");
-  console.log("Persistent disk not found, using local folder", UPLOAD_DIR);
-}
+// Data folder (persistent disk or fallback)
+const DATA_DIR = fs.existsSync("/mnt/data") ? "/mnt/data" : path.join(process.cwd(), "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+// Uploads folder under DATA_DIR
+const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+
+// Create section subfolders for organized uploads
+['portfolio', 'about', 'weddings'].forEach(sub => {
+  const p = path.join(UPLOAD_DIR, sub);
+  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+});
+
+// Migrate legacy JSON files from project ./data to persistent DATA_DIR if present
+const LEGACY_DATA_DIR = path.join(process.cwd(), 'data');
+['images.json', 'about_images.json', 'wedding_images.json', 'about_text.json', 'wedding_text.json'].forEach(fname => {
+  const legacyPath = path.join(LEGACY_DATA_DIR, fname);
+  const newPath = path.join(DATA_DIR, fname);
+  if (fs.existsSync(legacyPath) && !fs.existsSync(newPath)) {
+    try { fs.copyFileSync(legacyPath, newPath); console.log(`Migrated ${fname} to DATA_DIR`); } catch (e) { console.warn('Failed to migrate', legacyPath, e.message); }
+  }
+});
+
+console.log("Using data directory at", DATA_DIR);
+console.log("Using uploads dir at", UPLOAD_DIR);
 
 // Serve static files
 app.use(express.static("public"));
 app.use("/uploads", express.static(UPLOAD_DIR));
 
 // -----------------------------
-// JSON DB for images
-const IMAGE_DB = path.join("data", "images.json");
-if (!fs.existsSync("data")) fs.mkdirSync("data");
+// JSON DB for images (stored inside DATA_DIR)
+const IMAGE_DB = path.join(DATA_DIR, "images.json");
 if (!fs.existsSync(IMAGE_DB)) fs.writeFileSync(IMAGE_DB, "[]");
 
 function loadImages() {
@@ -47,15 +62,16 @@ function saveImages(images) {
   fs.writeFileSync(IMAGE_DB, JSON.stringify(images, null, 2));
 }
 
-// Auto-load images from disk if DB empty
+// Auto-load images from disk if DB empty (load from uploads/portfolio)
 function ensureImageDB() {
   const images = loadImages();
-  if (images.length === 0 && fs.existsSync(UPLOAD_DIR)) {
-    const files = fs.readdirSync(UPLOAD_DIR)
+  const portfolioDir = path.join(UPLOAD_DIR, 'portfolio');
+  if (images.length === 0 && fs.existsSync(portfolioDir)) {
+    const files = fs.readdirSync(portfolioDir)
       .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
-      .map(f => `/uploads/${f}`);
+      .map(f => `/uploads/portfolio/${f}`);
     saveImages(files);
-    console.log(`Initialized image list with ${files.length} files.`);
+    console.log(`Initialized image list with ${files.length} files from portfolio`);
   }
 }
 ensureImageDB();
@@ -80,9 +96,21 @@ app.get("/is-admin", (req, res) => {
 });
 
 // -----------------------------
-// Multer upload setup
+// Multer upload setup (store per-section under uploads/)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOAD_DIR),
+  destination: (req, file, cb) => {
+    // default to portfolio
+    let sub = 'portfolio';
+    const orig = (req.originalUrl || req.url || '').toLowerCase();
+    if (orig.includes('/api/about')) sub = 'about';
+    else if (orig.includes('/api/weddings')) sub = 'weddings';
+
+    const dest = path.join(UPLOAD_DIR, sub);
+    if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
+    // expose which subdir we used for downstream handlers
+    req.uploadSubdir = sub;
+    cb(null, dest);
+  },
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
 });
 const upload = multer({ storage });
@@ -93,7 +121,8 @@ app.post("/upload", upload.single("image"), (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
 
   const images = loadImages();
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const sub = req.uploadSubdir || 'portfolio';
+  const imageUrl = `/uploads/${sub}/${req.file.filename}`;
   images.push(imageUrl);
   saveImages(images);
 
@@ -109,19 +138,20 @@ app.delete("/images/:filename", (req, res) => {
   const images = loadImages();
   const updated = images.filter(img => !img.endsWith(filename));
 
-  const filePath = path.join(UPLOAD_DIR, filename);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  // Try removing from known locations (root, portfolio, about, weddings)
+  const candidates = [path.join(UPLOAD_DIR, filename), path.join(UPLOAD_DIR, 'portfolio', filename), path.join(UPLOAD_DIR, 'about', filename), path.join(UPLOAD_DIR, 'weddings', filename)];
+  for (const fp of candidates) if (fs.existsSync(fp)) fs.unlinkSync(fp);
 
   saveImages(updated);
   res.json({ success: true });
 });
 
 // -----------------------------
-// Per-section image & text stores (about / wedding)
-const ABOUT_IMAGES_DB = path.join("data", "about_images.json");
-const WEDDING_IMAGES_DB = path.join("data", "wedding_images.json");
-const ABOUT_TEXT_DB = path.join("data", "about_text.json");
-const WEDDING_TEXT_DB = path.join("data", "wedding_text.json");
+// Per-section image & text stores (about / wedding) stored in DATA_DIR
+const ABOUT_IMAGES_DB = path.join(DATA_DIR, "about_images.json");
+const WEDDING_IMAGES_DB = path.join(DATA_DIR, "wedding_images.json");
+const ABOUT_TEXT_DB = path.join(DATA_DIR, "about_text.json");
+const WEDDING_TEXT_DB = path.join(DATA_DIR, "wedding_text.json");
 
 if (!fs.existsSync(ABOUT_IMAGES_DB)) fs.writeFileSync(ABOUT_IMAGES_DB, "[]");
 if (!fs.existsSync(WEDDING_IMAGES_DB)) fs.writeFileSync(WEDDING_IMAGES_DB, "[]");
@@ -136,7 +166,39 @@ function saveJson(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 }
 
-// --- ABOUT API ---
+// Initialize section DBs from upload folders if empty
+function ensureSectionDB(dirName, dbPath) {
+  const arr = loadJson(dbPath, []);
+  if (arr.length === 0) {
+    const dir = path.join(UPLOAD_DIR, dirName);
+    if (fs.existsSync(dir)) {
+      const files = fs.readdirSync(dir)
+        .filter(f => /\.(jpg|jpeg|png|gif)$/i.test(f))
+        .map(f => `/uploads/${dirName}/${f}`);
+      saveJson(dbPath, files);
+      console.log(`Initialized ${dbPath} with ${files.length} files from ${dirName}`);
+    }
+  }
+}
+ensureSectionDB('about', ABOUT_IMAGES_DB);
+ensureSectionDB('weddings', WEDDING_IMAGES_DB);
+
+// If uploads contain text files for sections, prefer initializing DB text from them (useful if someone manually uploaded a .txt)
+function ensureSectionText(dirName, dbPath, filename) {
+  const cur = loadJson(dbPath, { text: "" });
+  if (!cur || !cur.text) {
+    const filePath = path.join(UPLOAD_DIR, dirName, filename);
+    if (fs.existsSync(filePath)) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        saveJson(dbPath, { text: content });
+        console.log(`Initialized ${dbPath} from ${filePath}`);
+      } catch (e) { console.warn('Failed to read section text file', filePath, e.message); }
+    }
+  }
+}
+ensureSectionText('about', ABOUT_TEXT_DB, 'about_text.txt');
+ensureSectionText('weddings', WEDDING_TEXT_DB, 'wedding_text.txt');
 app.get("/api/about", (req, res) => {
   const textObj = loadJson(ABOUT_TEXT_DB, { text: "" });
   const images = loadJson(ABOUT_IMAGES_DB, []);
@@ -146,14 +208,25 @@ app.get("/api/about", (req, res) => {
 app.post("/api/about/text", (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
   const { text } = req.body;
-  saveJson(ABOUT_TEXT_DB, { text: text || "" });
+  const payload = { text: text || "" };
+  saveJson(ABOUT_TEXT_DB, payload);
+
+  // Also persist a plaintext copy next to the section uploads (for easy inspection/backups)
+  try {
+    const aboutTxt = path.join(UPLOAD_DIR, 'about', 'about_text.txt');
+    fs.writeFileSync(aboutTxt, payload.text, 'utf8');
+  } catch (e) {
+    console.warn('Failed to write about_text to uploads folder:', e.message);
+  }
+
   res.json({ success: true });
 });
 
 app.post("/api/about/upload", upload.single("image"), (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
   const images = loadJson(ABOUT_IMAGES_DB, []);
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const sub = req.uploadSubdir || 'about';
+  const imageUrl = `/uploads/${sub}/${req.file.filename}`;
   images.push(imageUrl);
   saveJson(ABOUT_IMAGES_DB, images);
   res.json({ success: true, url: imageUrl });
@@ -166,7 +239,7 @@ app.delete("/api/about/images/:filename", (req, res) => {
   const filename = req.params.filename;
   const images = loadJson(ABOUT_IMAGES_DB, []);
   const updated = images.filter(img => !img.endsWith(filename));
-  const filePath = path.join(UPLOAD_DIR, filename);
+  const filePath = path.join(UPLOAD_DIR, 'about', filename);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   saveJson(ABOUT_IMAGES_DB, updated);
   res.json({ success: true });
@@ -182,14 +255,25 @@ app.get("/api/weddings", (req, res) => {
 app.post("/api/weddings/text", (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
   const { text } = req.body;
-  saveJson(WEDDING_TEXT_DB, { text: text || "" });
+  const payload = { text: text || "" };
+  saveJson(WEDDING_TEXT_DB, payload);
+
+  // Also persist a plaintext copy next to the section uploads (for easy inspection/backups)
+  try {
+    const weddingTxt = path.join(UPLOAD_DIR, 'weddings', 'wedding_text.txt');
+    fs.writeFileSync(weddingTxt, payload.text, 'utf8');
+  } catch (e) {
+    console.warn('Failed to write wedding_text to uploads folder:', e.message);
+  }
+
   res.json({ success: true });
 });
 
 app.post("/api/weddings/upload", upload.single("image"), (req, res) => {
   if (!req.session.isAdmin) return res.status(403).json({ error: "Unauthorized" });
   const images = loadJson(WEDDING_IMAGES_DB, []);
-  const imageUrl = `/uploads/${req.file.filename}`;
+  const sub = req.uploadSubdir || 'weddings';
+  const imageUrl = `/uploads/${sub}/${req.file.filename}`;
   images.push(imageUrl);
   saveJson(WEDDING_IMAGES_DB, images);
   res.json({ success: true, url: imageUrl });
@@ -202,7 +286,7 @@ app.delete("/api/weddings/images/:filename", (req, res) => {
   const filename = req.params.filename;
   const images = loadJson(WEDDING_IMAGES_DB, []);
   const updated = images.filter(img => !img.endsWith(filename));
-  const filePath = path.join(UPLOAD_DIR, filename);
+  const filePath = path.join(UPLOAD_DIR, 'weddings', filename);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
   saveJson(WEDDING_IMAGES_DB, updated);
   res.json({ success: true });

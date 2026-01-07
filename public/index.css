@@ -205,7 +205,8 @@ footer {
   color: #f39c12;
 }
 
-.weddings-gallery {
+
+.weddings-portfolio {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.6em;
@@ -213,26 +214,42 @@ footer {
   margin: 0.5em auto 2em;
 }
 
-.weddings-gallery .image-div {
+.weddings-portfolio .image-div {
   height: 200px;
   width: 100%;
   border-radius: 6px;
   overflow: hidden;
+}
+
+/* Text block inserted in the grid after the first three wedding images */
+.weddings-text-block {
+  flex-basis: 100%;
+  max-width: 900px;
+  width: 100%;
+  margin: 1em auto;
+  padding: 0.5em 0;
+}
+
+.weddings-text-block .weddings-text {
+  line-height: 1.6;
 }
 
 .about-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: block;
   gap: 0.6em;
-  width: 93%;
-  margin: 0.5em auto 2em;
+  width: 100%; /* fill left column */
+  margin: 0.5em 0;
 }
 
-.about-gallery .image-div {
-  height: 200px;
+/* Ensure About layout vertically centers content relative to the portrait */
+.about .section-inner {
+  align-items: center;
+  height: 60vh; /* portrait-style tall image */
   width: 100%;
   border-radius: 6px;
   overflow: hidden;
+  background-size: cover;
+  background-position: center;
 }
 
 /* Two-column layout for sections (images left - text right). Left column uses 50vw for wider images */
@@ -252,6 +269,21 @@ footer {
   display: flex;
   flex-direction: column;
   gap: 0.6em;
+}
+
+/* About page: make the portrait smaller (around 45% width) */
+.about .section-left {
+  width: 45%;
+  min-width: 260px;
+}
+
+/* About portrait sizing */
+.about .section-left .image-div {
+  height: 60vh; /* portrait height */
+  max-height: 80vh;
+  width: 70%;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 /* Right column fills remaining space */
