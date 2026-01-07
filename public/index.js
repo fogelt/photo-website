@@ -4,6 +4,22 @@ const gridContainer = document.querySelector(".grid-container");
 
 let admin = false;
 
+// Format text: escape HTML and support **bold**
+function formatText(text) {
+  if (!text) return '';
+  // escape HTML to prevent XSS
+  const esc = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  // convert **bold** to <strong>
+  const bold = esc.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // preserve newlines
+  return bold.replace(/\n/g, '<br>');
+}
+
 // Check admin status
 async function checkAdmin() {
   const res = await fetch("/is-admin");
@@ -35,6 +51,8 @@ document.addEventListener("keydown", (e) => {
 async function loadGallery() {
   const res = await fetch("/images");
   const images = await res.json();
+  // ensure weddings grid styles are removed when showing main gallery
+  gridContainer.classList.remove('weddings-portfolio');
   gridContainer.innerHTML = "";
 
   images.forEach(url => {
@@ -111,6 +129,14 @@ async function handleImageUpload(e) {
     let uploadEndpoint = "/upload";
     if (section === 'about') uploadEndpoint = '/api/about/upload';
     else if (section === 'weddings') uploadEndpoint = '/api/weddings/upload';
+
+    // include explicit section in query (more reliable) and as form field
+    if (section) {
+      // append query param
+      if (!uploadEndpoint.includes('?')) uploadEndpoint += `?section=${encodeURIComponent(section)}`;
+      else uploadEndpoint += `&section=${encodeURIComponent(section)}`;
+      formData.append('section', section);
+    }
 
     const res = await fetch(uploadEndpoint, { method: "POST", body: formData });
     const data = await res.json();
@@ -205,6 +231,7 @@ async function renderWeddings() {
   const text = data.text || '';
 
   // Render weddings like portfolio: flat grid, insert text after 3rd image
+  gridContainer.classList.add('weddings-portfolio');
   gridContainer.innerHTML = '';
 
   let textInserted = false;
@@ -218,7 +245,7 @@ async function renderWeddings() {
     if (idx === 2) {
       const textDiv = document.createElement('div');
       textDiv.className = 'weddings-text-block';
-      textDiv.innerHTML = `<div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>`;
+      textDiv.innerHTML = `<div class="weddings-text">${formatText(text)}</div>`;
       gridContainer.appendChild(textDiv);
 
       if (admin) {
@@ -264,7 +291,7 @@ async function renderWeddings() {
   if (!textInserted) {
     const textDiv = document.createElement('div');
     textDiv.className = 'weddings-text-block';
-    textDiv.innerHTML = `<div class="weddings-text">${text.replace(/\n/g, '<br>')}</div>`;
+    textDiv.innerHTML = `<div class="weddings-text">${formatText(text)}</div>`;
     gridContainer.appendChild(textDiv);
 
     if (admin) {
@@ -317,6 +344,8 @@ async function renderAbout() {
   const text = data.text || '';
   const selected = images.slice(0, 1); // only one portrait image
 
+  // ensure weddings styles are cleared before switching to About layout
+  gridContainer.classList.remove('weddings-portfolio');
   gridContainer.innerHTML = `
     <section class="about">
       <div class="section-inner">
@@ -326,7 +355,7 @@ async function renderAbout() {
         <div class="section-right">
           <div class="about-text" style="line-height:1.6;">
             <h2>Om mig</h2>
-            <div class="about-text-content">${text.replace(/\n/g, '<br>')}<br></div>
+            <div class="about-text-content">${formatText(text)}<br></div>
           </div>
         </div>
       </div>

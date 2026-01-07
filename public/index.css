@@ -138,12 +138,22 @@ header .right-items a.active {
 
 /* === Pattern repeats every 10 === */
 
-/* First three portraits taller (|||) */
 .image-div:nth-child(10n+1),
 .image-div:nth-child(10n+2),
 .image-div:nth-child(10n+3) {
   height: 40vh;
   width: 25vw;
+}
+
+/* First three portraits taller (|||) */
+.weddings-portfolio .image-div:nth-child(10n+1),
+.weddings-portfolio .image-div:nth-child(10n+2),
+.weddings-portfolio .image-div:nth-child(10n+3) {
+  height: 60vh;
+  width: 15vw;
+}/* On the weddings site, the 2nd image div is wider than 1 and 3 */
+.weddings-portfolio .image-div:nth-child(10n+2) {
+  width: 35vw;
 }
 
 /* Next two landscapes (-- ) */
@@ -205,22 +215,6 @@ footer {
   color: #f39c12;
 }
 
-
-.weddings-portfolio {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.6em;
-  width: 93%;
-  margin: 0.5em auto 2em;
-}
-
-.weddings-portfolio .image-div {
-  height: 200px;
-  width: 100%;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
 /* Text block inserted in the grid after the first three wedding images */
 .weddings-text-block {
   flex-basis: 100%;
@@ -271,17 +265,17 @@ footer {
   gap: 0.6em;
 }
 
-/* About page: make the portrait smaller (around 45% width) */
+/* About page: make the portrait slightly wider (around 48% width) */
 .about .section-left {
-  width: 45%;
+  width: 48%;
   min-width: 260px;
-}
+} 
 
 /* About portrait sizing */
 .about .section-left .image-div {
   height: 60vh; /* portrait height */
   max-height: 80vh;
-  width: 70%;
+  width: 90%;
   border-radius: 6px;
   overflow: hidden;
 }

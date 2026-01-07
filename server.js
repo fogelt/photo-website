@@ -101,14 +101,25 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     // default to portfolio
     let sub = 'portfolio';
-    const orig = (req.originalUrl || req.url || '').toLowerCase();
-    if (orig.includes('/api/about')) sub = 'about';
-    else if (orig.includes('/api/weddings')) sub = 'weddings';
+
+    // 1) prefer explicit query param: ?section=about|weddings|portfolio
+    const q = (req.query && req.query.section) ? String(req.query.section).toLowerCase() : null;
+    if (q === 'about' || q === 'weddings' || q === 'portfolio') sub = q;
+    else {
+      // 2) fallback to URL detection
+      const orig = (req.originalUrl || req.url || '').toLowerCase();
+      if (orig.includes('/api/about')) sub = 'about';
+      else if (orig.includes('/api/weddings')) sub = 'weddings';
+    }
 
     const dest = path.join(UPLOAD_DIR, sub);
     if (!fs.existsSync(dest)) fs.mkdirSync(dest, { recursive: true });
     // expose which subdir we used for downstream handlers
     req.uploadSubdir = sub;
+
+    // log for diagnostics (safe to leave in dev, harmless in prod)
+    console.log(`[upload] ${new Date().toISOString()} - endpoint=${req.originalUrl || req.url} -> sub=${sub}`);
+
     cb(null, dest);
   },
   filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
